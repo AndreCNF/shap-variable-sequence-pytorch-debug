@@ -386,7 +386,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
         # Check if the data being normalized is directly the dataframe
         if data is None:
             # Treat the dataframe as the data being normalized
-            data = df
+            data = df.copy()
 
             # Normalize the right columns
             for col in iterations_loop(columns_to_normalize, see_progress=see_progress):
@@ -414,7 +414,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
         # Check if the data being normalized is directly the dataframe
         if data is None:
             # Treat the dataframe as the data being normalized
-            data = df
+            data = df.copy()
 
             # Normalize the right columns
             for col in iterations_loop(columns_to_normalize, see_progress=see_progress):
@@ -959,12 +959,11 @@ def model_inference(model, seq_len_dict, dataloader=None, data=None, metrics=['l
             output = unpadded_scores
 
         if seq_final_outputs:
-            # Only get the outputs retrieved at the sequences' end
-            # Cumulative sequence lengths
-            x_lengths_cumsum = np.cumsum(x_lengths)
+            # Indeces at the end of each sequence
+            final_seq_idx = [n_subject*features.shape[1]+x_lengths[n_subject]-1 for n_subject in range(features.shape[0])]
 
             # Get the outputs of the last instances of each sequence
-            output = output[x_lengths_cumsum-1]
+            output = output[final_seq_idx]
 
         if any(mtrc in metrics for mtrc in ['precision', 'recall', 'F1']):
             # Calculate the number of true positives, false negatives, true negatives and false positives
@@ -1031,12 +1030,11 @@ def model_inference(model, seq_len_dict, dataloader=None, data=None, metrics=['l
                 output = torch.cat([output.float(), unpadded_scores])
 
             if seq_final_outputs:
-                # Only get the outputs retrieved at the sequences' end
-                # Cumulative sequence lengths
-                x_lengths_cumsum = np.cumsum(x_lengths)
+                # Indeces at the end of each sequence
+                final_seq_idx = [n_subject*features.shape[1]+x_lengths[n_subject]-1 for n_subject in range(features.shape[0])]
 
                 # Get the outputs of the last instances of each sequence
-                output = output[x_lengths_cumsum-1]
+                output = output[final_seq_idx]
 
             if any(mtrc in metrics for mtrc in ['precision', 'recall', 'F1']):
                 # Calculate the number of true positives, false negatives, true negatives and false positives
