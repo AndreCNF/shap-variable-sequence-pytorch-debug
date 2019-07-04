@@ -5,8 +5,7 @@ import pandas as pd                                     # Pandas to handle the d
 from datetime import datetime                           # datetime to use proper date and time formats
 import os                                               # os handles directory/workspace changes
 import numpy as np                                      # NumPy to handle numeric and NaN operations
-from tqdm import tqdm                                   # tqdm allows to track code execution progress
-from tqdm import tqdm_notebook                          # tqdm allows to track code execution progress
+from tqdm.autonotebook import tqdm                      # tqdm allows to track code execution progress
 import numbers                                          # numbers allows to check if data is numeric
 from NeuralNetwork import NeuralNetwork                 # Import the neural network model class
 from sklearn.metrics import roc_auc_score               # ROC AUC model performance metric
@@ -389,7 +388,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
             data = df.copy()
 
             # Normalize the right columns
-            for col in iterations_loop(columns_to_normalize, see_progress=see_progress):
+            for col in tqdm(columns_to_normalize, disable=not see_progress):
                 data[col] = (data[col] - column_means[col]) / column_stds[col]
 
         # Otherwise, the tensor is normalized
@@ -404,7 +403,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
             tensor_columns_to_normalize = [name_to_idx[name] for name in columns_to_normalize]
 
             # Normalize the right columns
-            for col in iterations_loop(tensor_columns_to_normalize, see_progress=see_progress):
+            for col in tqdm(tensor_columns_to_normalize, disable=not see_progress):
                 data[:, :, col] = (data[:, :, col] - column_means[idx_to_name[col]]) / column_stds[idx_to_name[col]]
 
     elif normalization_method.lower() == 'min-max':
@@ -417,7 +416,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
             data = df.copy()
 
             # Normalize the right columns
-            for col in iterations_loop(columns_to_normalize, see_progress=see_progress):
+            for col in tqdm(columns_to_normalize, disable=not see_progress):
                 data[col] = (data[col] - column_mins[col]) / (column_maxs[col] - column_mins[col])
 
         # Otherwise, the tensor is normalized
@@ -432,7 +431,7 @@ def normalize_data(df, data=None, id_columns=['subject_id', 'ts'], normalization
             tensor_columns_to_normalize = [name_to_idx[name] for name in columns_to_normalize]
 
             # Normalize the right columns
-            for col in iterations_loop(tensor_columns_to_normalize, see_progress=see_progress):
+            for col in tqdm(tensor_columns_to_normalize, disable=not see_progress):
                 data[:, :, col] = (data[:, :, col] - column_mins[idx_to_name[col]]) / \
                                   (column_maxs[idx_to_name[col]] - column_mins[idx_to_name[col]])
 
@@ -503,7 +502,7 @@ def denormalize_data(df, data, id_columns=['subject_id', 'ts'], normalization_me
         # Check if the data being denormalized is a dataframe
         if type(data) is pd.DataFrame:
             # Denormalize the right columns
-            for col in iterations_loop(columns_to_denormalize, see_progress=see_progress):
+            for col in tqdm(columns_to_denormalize, disable=not see_progress):
                 denorm_data[col] = data[col] * column_stds[col] + column_means[col]
 
         # Otherwise, the tensor is denormalized
@@ -518,7 +517,7 @@ def denormalize_data(df, data, id_columns=['subject_id', 'ts'], normalization_me
             tensor_columns_to_denormalize = [name_to_idx[name] for name in columns_to_denormalize]
 
             # Denormalize the right columns
-            for col in iterations_loop(tensor_columns_to_denormalize, see_progress=see_progress):
+            for col in tqdm(tensor_columns_to_denormalize, disable=not see_progress):
                 denorm_data[:, :, col] = data[:, :, col] * column_stds[idx_to_name[col]] + column_means[idx_to_name[col]]
 
     elif normalization_method.lower() == 'min-max':
@@ -528,7 +527,7 @@ def denormalize_data(df, data, id_columns=['subject_id', 'ts'], normalization_me
         # Check if the data being normalized is directly the dataframe
         if type(data) is pd.DataFrame:
             # Denormalize the right columns
-            for col in iterations_loop(columns_to_denormalize, see_progress=see_progress):
+            for col in tqdm(columns_to_denormalize, disable=not see_progress):
                 denorm_data[col] = data[col] * (column_maxs[col] - column_mins[col]) + column_mins[col]
 
         # Otherwise, the tensor is denormalized
@@ -543,7 +542,7 @@ def denormalize_data(df, data, id_columns=['subject_id', 'ts'], normalization_me
             tensor_columns_to_denormalize = [name_to_idx[name] for name in columns_to_normalize]
 
             # Denormalize the right columns
-            for col in iterations_loop(tensor_columns_to_denormalize, see_progress=see_progress):
+            for col in tqdm(tensor_columns_to_denormalize, disable=not see_progress):
                 denorm_data[:, :, col] = data[:, :, col] * (column_maxs[idx_to_name[col]] - column_mins[idx_to_name[col]]) \
                                          + column_mins[idx_to_name[col]]
 
@@ -721,7 +720,7 @@ def in_ipynb():
         return False
 
 
-def iterations_loop(x, see_progress=True):
+def tqdm(x, see_progress=True):
     '''Determine if a progress bar is shown or not.'''
     if see_progress:
         # Define the method to use as a progress bar, depending on whether code
@@ -849,6 +848,32 @@ def change_grad(grad, data, min=0, max=1):
             grad[i] = 0
 
     return grad
+
+
+def ts_tensor_to_np_matrix(data, feat_num, padding_value=999999):
+    '''Convert a 3D PyTorch tensor, such as one representing multiple time series
+    data, into a 2D NumPy matrix. Can be useful for applying the SHAP Kernel
+    Explainer.
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        PyTorch tensor containing the three dimensional data being converted.
+    feat_num : list of int
+        List of the column numbers that represent the features.
+    padding_value : numeric
+        Value to use in the padding, to fill the sequences.
+
+    Returns
+    -------
+    data_matrix : numpy.ndarray
+        NumPy two dimensional matrix obtained from the data after conversion.
+    '''
+    # View as a single sequence, i.e. like a dataframe without grouping by id
+    data_matrix = data.contiguous().view(-1, data.shape[2]).detach().numpy()
+    # Remove rows that are filled with padding values
+    data_matrix[[not all(row == padding_value) for row in data_matrix[:, feat_num]]]
+    return data_matrix
 
 
 def model_inference(model, seq_len_dict, dataloader=None, data=None, metrics=['loss', 'accuracy', 'AUC'],
