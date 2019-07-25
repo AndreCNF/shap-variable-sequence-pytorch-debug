@@ -3,3 +3,5 @@
 .ipynb_checkpoints/SHAP_multivariate_seq_pytorch_example-checkpoint.ipynb
 *.pth
 *.pyc
+*.pyc
+*.csv

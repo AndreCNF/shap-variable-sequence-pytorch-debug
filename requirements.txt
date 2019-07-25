@@ -57,7 +57,7 @@ scikit-image==0.15.0
 scikit-learn==0.21.2
 scipy==1.3.0
 Send2Trash==1.5.0
--e git+https://github.com/AndreCNF/shap.git@30d131ef51e3b3395f92104062fa93e5ea7724da#egg=shap
+-e git+https://github.com/AndreCNF/shap.git@f0777334bd82a1bacad578eaf1931c3ecbf40ec6#egg=shap
 six==1.12.0
 terminado==0.8.2
 testpath==0.4.2
